@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star Background with Countdown</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      background-color: #000;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      font-size: 2em;
+    }
+
+    b { font-weight: bold; }
+
+    .star-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      background-color: #fff;
+      border-radius: 50%;
+      animation: twinkle 5s infinite;
+      box-shadow: 0 0 10px #fff, 0 0 20px #fff;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="star-container" id="star-container"></div>
+
+  <div class="content">
+    <div id="countdown"></div>
+  </div>
+
+  <script>
+    // ==== STAR BACKGROUND ====
+    const starContainer = document.getElementById('star-container');
+    const starCount = 150;
+    const starSizeMultiplier = 1;
+    const starColor = "#ffffff";
+    let stars = [];
+    let velocities = [];
+    let starSpeed = 2;
+
+    function createStar() {
+      const star = document.createElement('div');
+      const baseSize = Math.random() * 3 + 1;
+      const size = baseSize * starSizeMultiplier;
+      star.className = 'star';
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      star.style.top = `${Math.random() * 100}%`;
+      star.style.left = `${Math.random() * 100}%`;
+      star.style.animationDuration = `${Math.random() * 3 + 2}s`;
+      star.style.backgroundColor = starColor;
+      starContainer.appendChild(star);
+      return star;
+    }
+
+    function generateStars() {
+      for (let i = 0; i < starCount; i++) {
+        stars.push(createStar());
+        velocities.push({
+          x: (Math.random() - 0.5) * 2,
+          y: (Math.random() - 0.5) * 2
+        });
+      }
+    }
+
+    let velocityX = 0;
+    let velocityY = 0;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      velocityX = e.clientX - lastMouseX;
+      velocityY = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    function moveStars() {
+      stars.forEach((star, index) => {
+        const rect = star.getBoundingClientRect();
+        let top = rect.top + velocities[index].y * starSpeed + velocityY * 0.05;
+        let left = rect.left + velocities[index].x * starSpeed + velocityX * 0.05;
+
+        if (top < 0) top = window.innerHeight;
+        if (top > window.innerHeight) top = 0;
+        if (left < 0) left = window.innerWidth;
+        if (left > window.innerWidth) left = 0;
+
+        star.style.top = `${top}px`;
+        star.style.left = `${left}px`;
+      });
+
+      requestAnimationFrame(moveStars);
+    }
+
+    generateStars();
+    moveStars();
+
+    // ==== COUNTDOWN ====
+    const weekdaySchedule = [
+      {name:"A1/B1",start:510,end:590},
+      {name:"A2/B2",start:595,end:675},
+      {name:"1st Lunch",start:675,end:710},
+      {name:"Quest (1st Lunch)",start:715,end:745},
+      {name:"Quest (2nd Lunch)",start:680,end:710},
+      {name:"2nd Lunch",start:710,end:745},
+      {name:"A3/B3",start:750,end:830},
+      {name:"A4/B4",start:835,end:915}
+    ];
+
+    const fridaySchedule = [
+      {name:"Quest",start:510,end:570},
+      {name:"A1/B1",start:575,end:625},
+      {name:"A2/B2",start:630,end:680},
+      {name:"1st Lunch",start:680,end:715},
+      {name:"A3/B3 (1st Lunch)",start:720,end:770},
+      {name:"A3/B3 (2nd Lunch)",start:685,end:735},
+      {name:"2nd Lunch",start:735,end:770},
+      {name:"A4/B4",start:775,end:825}
+    ];
+
+    function getCurrentPeriod() {
+      const now = new Date();
+      const day = now.getDay();
+      const time = now.getHours()*60 + now.getMinutes();
+      let schedule = (day>=1 && day<=4)?weekdaySchedule:(day===5?fridaySchedule:null);
+      if(!schedule) return null;
+      let current = schedule.find(p=>time>=p.start && time<p.end);
+      if(!current) return null;
+      if(current.name.includes("Quest")||current.name.includes("Lunch")||current.name.includes("A3/B3")){
+        const options = schedule.filter(p=>p.name.startsWith(current.name.split(" ")[0]));
+        if(options.length>1){
+          let choice = prompt(`Which are you in?\n${options.map((o,i)=>`${i+1}. ${o.name}`).join("\n")}`);
+          current = options[(parseInt(choice)-1)||0];
+        }
+      }
+      return current;
+    }
+
+    function updateCountdown(){
+      const current = getCurrentPeriod();
+      const el = document.getElementById('countdown');
+      if(!current){
+        el.textContent = "No class right now 🎉";
+        document.title = "No class";
+        return;
+      }
+      const now = new Date();
+      const minutesNow = now.getHours()*60 + now.getMinutes();
+      let totalSecsLeft = (current.end - minutesNow)*60 - now.getSeconds();
+      if(totalSecsLeft < 0) totalSecsLeft = 0;
+      const mins = Math.floor(totalSecsLeft/60);
+      const secs = totalSecsLeft%60;
+      el.innerHTML = `${mins} min ${secs} sec left till <b>${current.name}</b> is over`;
+      document.title = `${mins}m ${secs}s left`;
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>
